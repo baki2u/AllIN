@@ -1,10 +1,11 @@
 """
-screener.py – Combined entry point for all AllIN Zerodha screening strategies.
+screener.py – Combined entry point for all AllIN Zerodha screening strategies
+              and popular investor account views.
 
 Runs any combination of the available strategies and prints results.
 
 Available strategies:
-  all               – Run every strategy
+  all               – Run every screening strategy
   gainers-today     – Today's top % gainers
   gainers-weekly    – Past N-day top % gainers
   reversal          – Stocks reversing after a multi-day losing streak
@@ -13,11 +14,19 @@ Available strategies:
   breakout-52w      – Price near or at 52-week high breakout
   golden-cross      – 20-day SMA crossing above 50-day SMA
 
+Popular account views (run standalone or alongside strategies):
+  portfolio         – Portfolio holdings with unrealised P&L
+  positions         – Current open positions (intraday + overnight)
+  orders            – Today's order book, tradebook, and GTT orders
+
 Usage examples:
-  python screener.py                          # Run all strategies
+  python screener.py                          # Run all screening strategies
   python screener.py gainers-today reversal   # Run selected strategies
   python screener.py --top 10 all             # Top 10 results per strategy
   python screener.py reversal --min-loss-days 4 --confirm-volume
+  python screener.py portfolio                # View portfolio holdings
+  python screener.py positions orders         # View positions and orders
+  python screener.py portfolio positions orders gainers-today  # Mix freely
 """
 
 import argparse
@@ -36,6 +45,10 @@ from strategies import (
     breakout_52w_high,
     sma_golden_cross,
 )
+from kite_client import get_kite_client
+from portfolio import get_holdings, print_holdings
+from positions import get_positions, print_positions
+from orders import get_orders, print_orders, get_trades, print_trades, get_gtts, print_gtts
 
 STRATEGIES = [
     "gainers-today",
@@ -47,11 +60,43 @@ STRATEGIES = [
     "golden-cross",
 ]
 
+ACCOUNT_VIEWS = [
+    "portfolio",
+    "positions",
+    "orders",
+]
+
 
 def _section(title: str) -> None:
     print(f"\n{'#'*70}")
     print(f"  {title}")
     print(f"{'#'*70}\n")
+
+
+def run_account_views(args: argparse.Namespace) -> None:
+    """Run selected account-view commands (portfolio, positions, orders)."""
+    views = set(args.commands)
+    kite = get_kite_client()
+
+    if "portfolio" in views:
+        _section("PORTFOLIO HOLDINGS")
+        df = get_holdings(kite)
+        print_holdings(df)
+
+    if "positions" in views:
+        _section("OPEN POSITIONS")
+        df = get_positions(kite)
+        print_positions(df)
+
+    if "orders" in views:
+        _section("TODAY'S ORDERS & TRADES")
+        df_orders = get_orders(kite)
+        print_orders(df_orders)
+        df_trades = get_trades(kite)
+        print_trades(df_trades)
+        _section("GTT ORDERS")
+        df_gtts = get_gtts(kite)
+        print_gtts(df_gtts)
 
 
 def run_strategies(args: argparse.Namespace) -> None:
@@ -155,17 +200,21 @@ def run_strategies(args: argparse.Namespace) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="AllIN – Zerodha-powered stock screener.",
+        description="AllIN – Zerodha-powered stock screener and account viewer.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
+    all_commands = STRATEGIES + ACCOUNT_VIEWS + ["all"]
     parser.add_argument(
-        "strategies",
+        "commands",
         nargs="*",
         default=["all"],
-        choices=STRATEGIES + ["all"],
-        metavar="STRATEGY",
-        help=f"Strategies to run: {', '.join(STRATEGIES + ['all'])} (default: all)",
+        choices=all_commands,
+        metavar="COMMAND",
+        help=(
+            f"Strategies: {', '.join(STRATEGIES + ['all'])}  |  "
+            f"Account views: {', '.join(ACCOUNT_VIEWS)}  (default: all strategies)"
+        ),
     )
 
     # Common filters
@@ -200,11 +249,26 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    print(f"\nAllIN Stock Screener  |  {date.today()}  |  Exchange: {args.exchange}")
-    print(f"Strategies: {', '.join(args.strategies)}\n")
+    # Separate account-view commands from screening strategies
+    requested = set(args.commands)
+    account_cmds = requested & set(ACCOUNT_VIEWS)
+    strategy_cmds = requested - account_cmds  # may include 'all'
+
+    print(f"\nAllIN  |  {date.today()}  |  Exchange: {args.exchange}")
+    print(f"Commands: {', '.join(args.commands)}\n")
 
     try:
-        run_strategies(args)
+        # Run account views first if any were explicitly requested
+        if account_cmds:
+            args.commands = list(account_cmds)
+            run_account_views(args)
+
+        # Run screening strategies (skip if only account views were requested)
+        has_strategies = bool(strategy_cmds)
+        if has_strategies:
+            args.strategies = list(strategy_cmds)
+            run_strategies(args)
+
     except KeyboardInterrupt:
         print("\nInterrupted by user.")
         sys.exit(0)
