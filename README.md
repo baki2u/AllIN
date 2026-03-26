@@ -54,6 +54,17 @@ Python scripts to screen NSE/BSE stocks using the [Zerodha Kite Connect API](htt
 | `strategies.py` → `breakout_52w_high` | Price within 2% of 52-week high (~63-67% 10d win rate) |
 | `strategies.py` → `sma_golden_cross` | 20-day SMA crosses above 50-day SMA (~57-60% 10d win rate) |
 
+## Popular Investor Account Views
+
+These scripts use the most commonly accessed Kite Connect API endpoints
+among retail investors:
+
+| Script | Kite API used | Description |
+|---|---|---|
+| `portfolio.py` | `kite.holdings()` | Portfolio holdings with unrealised P&L, day-change, and total summary |
+| `positions.py` | `kite.positions()` | Current open positions – intraday (day) and overnight (net) – with live P&L |
+| `orders.py` | `kite.orders()` / `kite.trades()` / `kite.get_gtts()` | Today's order book, tradebook, and GTT (Good Till Triggered) orders |
+
 ## Setup
 
 ### 1. Install dependencies
@@ -82,18 +93,50 @@ from the redirect URL. Copy the printed `ACCESS_TOKEN` into your `.env` file.
 
 ## Usage
 
-### Run all strategies at once
+### Account views (popular investor endpoints)
 
 ```bash
-python screener.py
+# Portfolio holdings with unrealised P&L
+python portfolio.py
+python portfolio.py --sort-by pnl          # Sort by P&L
+python portfolio.py --sort-by pnl_pct      # Sort by % return
+python portfolio.py --sort-by day_change   # Sort by today's change
+python portfolio.py --gainers              # Show only profitable holdings
+python portfolio.py --losers               # Show only loss-making holdings
+python portfolio.py --top 20               # Limit to top 20
+
+# Open positions with live P&L
+python positions.py                        # Intraday + overnight
+python positions.py --type day             # Intraday only
+python positions.py --type net             # Overnight only
+python positions.py --open-only            # Skip fully-closed positions
+
+# Orders, trades, and GTT orders
+python orders.py                           # Show everything
+python orders.py --orders                  # Today's order book
+python orders.py --trades                  # Today's tradebook
+python orders.py --gtts                    # GTT orders
+python orders.py --status OPEN             # Filter orders by status
+python orders.py --gtts --status active    # Active GTTs only
 ```
 
-### Run specific strategies
+### Screening strategies
 
 ```bash
+# Run all screening strategies
+python screener.py
+
+# Run specific strategies
 python screener.py gainers-today reversal
 python screener.py rsi-bounce volume-surge
 python screener.py --top 10 all
+```
+
+### Mix account views and strategies in one command
+
+```bash
+python screener.py portfolio positions gainers-today
+python screener.py orders rsi-bounce volume-surge
 ```
 
 ### Individual scripts
@@ -109,17 +152,23 @@ python gainers_weekly.py --lookback 5 --top 15
 python reversal_screener.py --min-loss-days 4 --confirm-volume --confirm-rsi
 ```
 
-### Available strategy names for `screener.py`
+### Available commands for `screener.py`
 
 ```
-gainers-today   – Today's top % gainers
-gainers-weekly  – Past N-day top % gainers
-reversal        – Reversal after consecutive losses
-rsi-bounce      – RSI oversold bounce
-volume-surge    – Volume surge + positive close
-breakout-52w    – 52-week high breakout
-golden-cross    – 20-SMA crosses above 50-SMA
-all             – Run every strategy (default)
+Screening strategies:
+  gainers-today   – Today's top % gainers
+  gainers-weekly  – Past N-day top % gainers
+  reversal        – Reversal after consecutive losses
+  rsi-bounce      – RSI oversold bounce
+  volume-surge    – Volume surge + positive close
+  breakout-52w    – 52-week high breakout
+  golden-cross    – 20-SMA crosses above 50-SMA
+  all             – Run every strategy (default)
+
+Account views:
+  portfolio       – Holdings with unrealised P&L
+  positions       – Open positions with live P&L
+  orders          – Order book, tradebook, and GTT orders
 ```
 
 ## Common Options
@@ -145,11 +194,14 @@ AllIN/
 ├── config.py              # API credentials & strategy parameters
 ├── kite_client.py         # Authentication helper
 ├── data_fetcher.py        # Kite API data utilities & technical indicators
+├── portfolio.py           # Holdings viewer with P&L (kite.holdings)
+├── positions.py           # Open positions viewer (kite.positions)
+├── orders.py              # Order book, tradebook & GTT orders
 ├── gainers_today.py       # Today's top gainers
 ├── gainers_weekly.py      # Weekly top gainers
 ├── reversal_screener.py   # Reversal after multi-day losing streak
 ├── strategies.py          # RSI bounce, volume surge, 52w breakout, golden cross
-├── screener.py            # Combined screener entry point
+├── screener.py            # Combined screener + account views entry point
 ├── requirements.txt
 └── .env.example
 ```
