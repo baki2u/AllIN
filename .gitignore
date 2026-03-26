@@ -2,3 +2,9 @@
 access_token.txt
 __pycache__/
 *.py[cod]
+# .env
+.env
+__pycache__/
+*.py[cod]
+*.pyo
+.DS_Store
