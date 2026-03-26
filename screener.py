@@ -19,6 +19,9 @@ Popular account views (run standalone or alongside strategies):
   positions         – Current open positions (intraday + overnight)
   orders            – Today's order book, tradebook, and GTT orders
 
+Order management (delegates to place_order.py):
+  place-order       – Place, modify, or cancel orders (run for full help)
+
 Usage examples:
   python screener.py                          # Run all screening strategies
   python screener.py gainers-today reversal   # Run selected strategies
@@ -27,6 +30,7 @@ Usage examples:
   python screener.py portfolio                # View portfolio holdings
   python screener.py positions orders         # View positions and orders
   python screener.py portfolio positions orders gainers-today  # Mix freely
+  python screener.py place-order              # Show order placement help
 """
 
 import argparse
@@ -49,6 +53,7 @@ from kite_client import get_kite_client
 from portfolio import get_holdings, print_holdings
 from positions import get_positions, print_positions
 from orders import get_orders, print_orders, get_trades, print_trades, get_gtts, print_gtts
+from place_order import market_status_message
 
 STRATEGIES = [
     "gainers-today",
@@ -64,6 +69,10 @@ ACCOUNT_VIEWS = [
     "portfolio",
     "positions",
     "orders",
+]
+
+ORDER_VIEWS = [
+    "place-order",
 ]
 
 
@@ -204,7 +213,7 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
-    all_commands = STRATEGIES + ACCOUNT_VIEWS + ["all"]
+    all_commands = STRATEGIES + ACCOUNT_VIEWS + ORDER_VIEWS + ["all"]
     parser.add_argument(
         "commands",
         nargs="*",
@@ -213,7 +222,8 @@ def main() -> None:
         metavar="COMMAND",
         help=(
             f"Strategies: {', '.join(STRATEGIES + ['all'])}  |  "
-            f"Account views: {', '.join(ACCOUNT_VIEWS)}  (default: all strategies)"
+            f"Account views: {', '.join(ACCOUNT_VIEWS)}  |  "
+            f"Orders: {', '.join(ORDER_VIEWS)}  (default: all strategies)"
         ),
     )
 
@@ -249,10 +259,11 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    # Separate account-view commands from screening strategies
+    # Separate commands by category
     requested = set(args.commands)
     account_cmds = requested & set(ACCOUNT_VIEWS)
-    strategy_cmds = requested - account_cmds  # may include 'all'
+    order_cmds = requested & set(ORDER_VIEWS)
+    strategy_cmds = requested - account_cmds - order_cmds  # may include 'all'
 
     print(f"\nAllIN  |  {date.today()}  |  Exchange: {args.exchange}")
     print(f"Commands: {', '.join(args.commands)}\n")
@@ -263,7 +274,20 @@ def main() -> None:
             args.commands = list(account_cmds)
             run_account_views(args)
 
-        # Run screening strategies (skip if only account views were requested)
+        # Show order placement help if requested
+        if order_cmds:
+            _section("ORDER PLACEMENT")
+            print(f"  Market status: {market_status_message()}\n")
+            print("  Use place_order.py directly to place, modify, or cancel orders:")
+            print("    python place_order.py buy RELIANCE 10")
+            print("    python place_order.py buy INFY 10 --order-type LIMIT --price 1500")
+            print("    python place_order.py sell TCS 5 --product CNC")
+            print("    python place_order.py gtt buy RELIANCE 10 --trigger-price 2400 --price 2395")
+            print("    python place_order.py modify ORDER_ID --price 1510")
+            print("    python place_order.py cancel ORDER_ID")
+            print("    python place_order.py --help   # Full documentation\n")
+
+        # Run screening strategies (skip if only account/order views were requested)
         has_strategies = bool(strategy_cmds)
         if has_strategies:
             args.strategies = list(strategy_cmds)
