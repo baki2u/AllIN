@@ -38,3 +38,12 @@ RSI_OVERSOLD = float(os.getenv("RSI_OVERSOLD", "35"))
 RSI_PERIOD = int(os.getenv("RSI_PERIOD", "14"))
 VOLUME_SURGE_MULTIPLIER = float(os.getenv("VOLUME_SURGE_MULTIPLIER", "2.0"))
 HIGH_52W_PROXIMITY_PCT = float(os.getenv("HIGH_52W_PROXIMITY_PCT", "2.0"))
+
+# ORB (Opening Range Breakout) strategy parameters
+ORB_WINDOW_MIN = int(os.getenv("ORB_WINDOW_MIN", "15"))          # Minutes to define the opening range
+ORB_TARGET_PCT = float(os.getenv("ORB_TARGET_PCT", "0.01"))      # 1% profit target (0.01 = 1%)
+ORB_STOP_LOSS_PCT = float(os.getenv("ORB_STOP_LOSS_PCT", "0.005"))  # 0.5% stop loss (0.005 = 0.5%)
+ORB_SLIPPAGE_COMM = float(os.getenv("ORB_SLIPPAGE_COMM", "0.0005"))  # 0.05% per trade (brokerage + STT + slippage)
+ORB_ATR_PERIOD = int(os.getenv("ORB_ATR_PERIOD", "14"))          # ATR look-back period (daily candles)
+# Only trade days where the daily ATR >= ORB_ATR_MIN_MULTIPLIER * rolling-average ATR
+ORB_ATR_MIN_MULTIPLIER = float(os.getenv("ORB_ATR_MIN_MULTIPLIER", "1.0"))

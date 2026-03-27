@@ -188,6 +188,33 @@ def compute_volume_avg(volume: pd.Series, period: int = 20) -> pd.Series:
     return volume.rolling(window=period).mean()
 
 
+def compute_atr(df: pd.DataFrame, period: int = 14) -> pd.Series:
+    """
+    Compute Average True Range (ATR) using Wilder's smoothing.
+
+    Args:
+        df:     DataFrame with columns 'high', 'low', 'close'.
+        period: Look-back period (default 14).
+
+    Returns:
+        ATR values as a Series (same index as *df*).
+    """
+    high = df["high"]
+    low = df["low"]
+    prev_close = df["close"].shift(1)
+
+    tr = pd.concat(
+        [
+            high - low,
+            (high - prev_close).abs(),
+            (low - prev_close).abs(),
+        ],
+        axis=1,
+    ).max(axis=1)
+
+    return tr.ewm(com=period - 1, min_periods=period).mean()
+
+
 # ---------------------------------------------------------------------------
 # Convenience: enrich a candle DataFrame with indicators
 # ---------------------------------------------------------------------------
