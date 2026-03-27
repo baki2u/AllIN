@@ -14,6 +14,7 @@ Python scripts to screen NSE/BSE stocks and manage your account using the [Zerod
 | `strategies.py` → `volume_surge_up` | Volume ≥ 2× 20-day avg on a positive-close day (~60-65% 3d win rate) |
 | `strategies.py` → `breakout_52w_high` | Price within 2% of 52-week high (~63-67% 10d win rate) |
 | `strategies.py` → `sma_golden_cross` | 20-day SMA crosses above 50-day SMA (~57-60% 10d win rate) |
+| `orb_strategy.py` | Aggressive 15-min Opening Range Breakout with ATR volatility filter |
 
 ## Popular Investor Account Views
 
@@ -113,6 +114,25 @@ python gainers_weekly.py --lookback 5 --top 15
 python reversal_screener.py --min-loss-days 4 --confirm-volume --confirm-rsi
 ```
 
+### ORB (Opening Range Breakout) backtest
+
+```bash
+# Backtest RELIANCE over 2024 with default ATR filter (1×)
+python orb_strategy.py RELIANCE 2024-01-01 2024-12-31
+
+# Stricter volatility filter – only trade high-ATR days
+python orb_strategy.py RELIANCE 2024-01-01 2024-12-31 --atr-multiplier 1.5
+
+# Disable ATR filter to see raw ORB performance
+python orb_strategy.py NIFTY50 2024-01-01 2024-12-31 --no-atr-filter
+
+# Custom target and stop-loss
+python orb_strategy.py INFY 2024-01-01 2024-12-31 --target-pct 0.015 --sl-pct 0.007
+
+# Show from screener.py
+python screener.py orb-backtest
+```
+
 ### Available commands for `screener.py`
 
 ```
@@ -130,6 +150,9 @@ Account views:
   portfolio       – Holdings with unrealised P&L
   positions       – Open positions with live P&L
   orders          – Order book, tradebook, and GTT orders
+
+Backtests (show usage / delegate to standalone script):
+  orb-backtest    – Aggressive 15-min ORB backtest (see orb_strategy.py)
 ```
 
 ## Common Options
@@ -162,6 +185,7 @@ AllIN/
 ├── gainers_weekly.py      # Weekly top gainers
 ├── reversal_screener.py   # Reversal after multi-day losing streak
 ├── strategies.py          # RSI bounce, volume surge, 52w breakout, golden cross
+├── orb_strategy.py        # Aggressive 15-min ORB backtest with ATR volatility filter
 ├── screener.py            # Combined screener + account views entry point
 ├── requirements.txt
 └── .env.example

@@ -22,6 +22,9 @@ Popular account views (run standalone or alongside strategies):
 Order management (delegates to place_order.py):
   place-order       – Place, modify, or cancel orders (run for full help)
 
+ORB backtest (delegates to orb_strategy.py):
+  orb-backtest      – Aggressive 15-min Opening Range Breakout backtest
+
 Usage examples:
   python screener.py                          # Run all screening strategies
   python screener.py gainers-today reversal   # Run selected strategies
@@ -31,6 +34,7 @@ Usage examples:
   python screener.py positions orders         # View positions and orders
   python screener.py portfolio positions orders gainers-today  # Mix freely
   python screener.py place-order              # Show order placement help
+  python screener.py orb-backtest             # Show ORB backtest help
 """
 
 import argparse
@@ -73,6 +77,10 @@ ACCOUNT_VIEWS = [
 
 ORDER_VIEWS = [
     "place-order",
+]
+
+ORB_VIEWS = [
+    "orb-backtest",
 ]
 
 
@@ -213,7 +221,7 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
-    all_commands = STRATEGIES + ACCOUNT_VIEWS + ORDER_VIEWS + ["all"]
+    all_commands = STRATEGIES + ACCOUNT_VIEWS + ORDER_VIEWS + ORB_VIEWS + ["all"]
     parser.add_argument(
         "commands",
         nargs="*",
@@ -263,7 +271,8 @@ def main() -> None:
     requested = set(args.commands)
     account_cmds = requested & set(ACCOUNT_VIEWS)
     order_cmds = requested & set(ORDER_VIEWS)
-    strategy_cmds = requested - account_cmds - order_cmds  # may include 'all'
+    orb_cmds = requested & set(ORB_VIEWS)
+    strategy_cmds = requested - account_cmds - order_cmds - orb_cmds  # may include 'all'
 
     print(f"\nAllIN  |  {date.today()}  |  Exchange: {args.exchange}")
     print(f"Commands: {', '.join(args.commands)}\n")
@@ -286,6 +295,20 @@ def main() -> None:
             print("    python place_order.py modify ORDER_ID --price 1510")
             print("    python place_order.py cancel ORDER_ID")
             print("    python place_order.py --help   # Full documentation\n")
+
+        # Show ORB backtest help if requested
+        if orb_cmds:
+            _section("ORB BACKTEST (Aggressive 15-min Opening Range Breakout)")
+            print("  Use orb_strategy.py directly to run the ORB backtest:")
+            print("    python orb_strategy.py RELIANCE 2024-01-01 2024-12-31")
+            print("    python orb_strategy.py NIFTY50 2024-01-01 2024-12-31 --atr-multiplier 1.5")
+            print("    python orb_strategy.py INFY 2024-01-01 2024-12-31 --no-atr-filter")
+            print("    python orb_strategy.py --help   # Full documentation\n")
+            print("  Strategy highlights:")
+            print("    • Opening range defined by the first 15 min of session (09:15–09:30 IST)")
+            print("    • LONG on high breakout, SHORT on low breakout")
+            print("    • ATR volatility filter skips low-volatility choppy days")
+            print("    • Configurable target (default 1%), stop-loss (default 0.5%), and ATR multiplier\n")
 
         # Run screening strategies (skip if only account/order views were requested)
         has_strategies = bool(strategy_cmds)
